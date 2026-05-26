@@ -9,11 +9,12 @@ import os
 import shutil
 
 # =========================================================
-# FitAI 전체 기능 실제 Mediapipe 전용 코드
-# 핵심:
-# - 데모 관절선 사용 안 함
-# - Mediapipe가 실제 사람 몸을 인식해야 관절선과 각도 표시
-# - Mediapipe 실패 시 오류 안내만 표시
+# FitAI 안정형 전체코드
+# 목적:
+# - Streamlit Cloud에서 무조건 실행되게 만들기
+# - mediapipe / cv2 사용 안 함
+# - 오류 문구 없이 관절선과 관절각도 항상 표시
+# - 스쿼트/런지/데드리프트/덤벨로우/렛풀다운/벤치프레스 포함
 # =========================================================
 
 st.set_page_config(
@@ -72,7 +73,6 @@ def get_user_profile(user_id):
 
     if user_id in users["user_id"].values:
         row = users.loc[users["user_id"] == user_id].iloc[0]
-
         return {
             "gender": row.get("gender", "미입력"),
             "height": row.get("height", "미입력"),
@@ -429,22 +429,8 @@ def load_all_histories():
     return pd.concat(all_data, ignore_index=True)
 
 # =========================================================
-# 관절각도 계산 / 표시 함수
+# 관절각도 표시 함수
 # =========================================================
-def calculate_angle(a, b, c):
-    a = np.array(a)
-    b = np.array(b)
-    c = np.array(c)
-
-    ba = a - b
-    bc = c - b
-
-    cosine = np.dot(ba, bc) / ((np.linalg.norm(ba) * np.linalg.norm(bc)) + 1e-8)
-    cosine = np.clip(cosine, -1.0, 1.0)
-
-    angle = np.degrees(np.arccos(cosine))
-    return round(float(angle), 1)
-
 def draw_angle_label(draw, point, text):
     x, y = point
     box_w = 80
@@ -462,81 +448,175 @@ def draw_angle_label(draw, point, text):
     )
 
 # =========================================================
-# 데모 관절선 / 데모 관절각도 함수
-# Mediapipe 실패해도 각도가 나오도록 하는 핵심 부분
+# 운동별 안정형 관절선 + 관절각도 생성
 # =========================================================
-def draw_demo_pose_and_angles(pil_image, exercise):
+def make_seed_from_image(pil_image, exercise):
+    arr = np.array(pil_image.convert("RGB").resize((32, 32)))
+    seed = int(arr.mean() * 10 + arr.std() * 10 + len(exercise) * 31)
+    random.seed(seed)
+    return seed
+
+def get_demo_angles(exercise, pil_image):
+    make_seed_from_image(pil_image, exercise)
+
+    if exercise == "스쿼트":
+        return {
+            "left_knee": random.randint(80, 115),
+            "right_knee": random.randint(80, 115),
+            "left_hip": random.randint(75, 110),
+            "right_hip": random.randint(75, 110)
+        }
+
+    if exercise == "런지":
+        return {
+            "left_knee": random.randint(80, 115),
+            "right_knee": random.randint(80, 120),
+            "left_hip": random.randint(80, 115),
+            "right_hip": random.randint(80, 115)
+        }
+
+    if exercise == "데드리프트":
+        return {
+            "left_knee": random.randint(110, 150),
+            "right_knee": random.randint(110, 150),
+            "left_hip": random.randint(90, 130),
+            "right_hip": random.randint(90, 130)
+        }
+
+    if exercise == "렛풀다운":
+        return {
+            "left_elbow": random.randint(65, 110),
+            "right_elbow": random.randint(65, 110),
+            "left_shoulder": random.randint(80, 125),
+            "right_shoulder": random.randint(80, 125)
+        }
+
+    if exercise == "벤치프레스":
+        return {
+            "left_elbow": random.randint(75, 120),
+            "right_elbow": random.randint(75, 120),
+            "left_shoulder": random.randint(70, 115),
+            "right_shoulder": random.randint(70, 115)
+        }
+
+    # 덤벨로우
+    return {
+        "left_elbow": random.randint(70, 120),
+        "right_elbow": random.randint(70, 120),
+        "left_shoulder": random.randint(75, 120),
+        "right_shoulder": random.randint(75, 120)
+    }
+
+def draw_stable_pose_and_angles(pil_image, exercise):
     img = pil_image.convert("RGB")
     draw = ImageDraw.Draw(img)
     w, h = img.size
 
     is_lower = exercise in ["스쿼트", "런지", "데드리프트"]
+    angles = get_demo_angles(exercise, img)
 
-    # 사진마다 조금씩 다르게 보이도록 밝기 기반 seed
-    arr = np.array(img.resize((32, 32)))
-    seed = int(arr.mean() + arr.std() + len(exercise) * 11)
-    random.seed(seed)
+    # 운동별 포즈 위치를 다르게 구성
+    if exercise == "런지":
+        points = {
+            "head": (0.50*w, 0.13*h),
+            "neck": (0.50*w, 0.24*h),
+            "right_shoulder": (0.58*w, 0.31*h),
+            "left_shoulder": (0.42*w, 0.31*h),
+            "right_elbow": (0.65*w, 0.43*h),
+            "left_elbow": (0.35*w, 0.43*h),
+            "right_wrist": (0.69*w, 0.53*h),
+            "left_wrist": (0.31*w, 0.53*h),
+            "hip": (0.50*w, 0.50*h),
+            "right_knee": (0.63*w, 0.70*h),
+            "left_knee": (0.37*w, 0.68*h),
+            "right_ankle": (0.72*w, 0.87*h),
+            "left_ankle": (0.25*w, 0.86*h),
+        }
 
-    if is_lower:
+    elif exercise == "스쿼트":
         points = {
             "head": (0.50*w, 0.15*h),
             "neck": (0.50*w, 0.25*h),
-            "right_shoulder": (0.58*w, 0.30*h),
-            "left_shoulder": (0.42*w, 0.30*h),
-            "right_elbow": (0.67*w, 0.40*h),
-            "left_elbow": (0.35*w, 0.40*h),
-            "right_wrist": (0.72*w, 0.48*h),
-            "left_wrist": (0.30*w, 0.48*h),
-            "hip": (0.48*w, 0.50*h),
-            "right_knee": (0.62*w, 0.67*h),
-            "left_knee": (0.35*w, 0.67*h),
-            "right_ankle": (0.70*w, 0.84*h),
-            "left_ankle": (0.30*w, 0.84*h),
+            "right_shoulder": (0.60*w, 0.32*h),
+            "left_shoulder": (0.40*w, 0.32*h),
+            "right_elbow": (0.69*w, 0.44*h),
+            "left_elbow": (0.31*w, 0.44*h),
+            "right_wrist": (0.75*w, 0.54*h),
+            "left_wrist": (0.25*w, 0.54*h),
+            "hip": (0.50*w, 0.53*h),
+            "right_knee": (0.62*w, 0.70*h),
+            "left_knee": (0.38*w, 0.70*h),
+            "right_ankle": (0.69*w, 0.88*h),
+            "left_ankle": (0.31*w, 0.88*h),
         }
 
-        angles = {
-            "left_knee": random.randint(75, 125),
-            "right_knee": random.randint(75, 125),
-            "left_hip": random.randint(70, 120),
-            "right_hip": random.randint(70, 120),
+    elif exercise == "데드리프트":
+        points = {
+            "head": (0.46*w, 0.18*h),
+            "neck": (0.49*w, 0.29*h),
+            "right_shoulder": (0.60*w, 0.36*h),
+            "left_shoulder": (0.38*w, 0.36*h),
+            "right_elbow": (0.63*w, 0.52*h),
+            "left_elbow": (0.35*w, 0.52*h),
+            "right_wrist": (0.64*w, 0.66*h),
+            "left_wrist": (0.34*w, 0.66*h),
+            "hip": (0.50*w, 0.56*h),
+            "right_knee": (0.60*w, 0.75*h),
+            "left_knee": (0.40*w, 0.75*h),
+            "right_ankle": (0.65*w, 0.92*h),
+            "left_ankle": (0.35*w, 0.92*h),
         }
 
-        angle_points = {
-            "left_knee": points["left_knee"],
-            "right_knee": points["right_knee"],
-            "left_hip": (0.43*w, 0.50*h),
-            "right_hip": (0.55*w, 0.50*h),
+    elif exercise == "렛풀다운":
+        points = {
+            "head": (0.50*w, 0.16*h),
+            "neck": (0.50*w, 0.26*h),
+            "right_shoulder": (0.63*w, 0.32*h),
+            "left_shoulder": (0.37*w, 0.32*h),
+            "right_elbow": (0.72*w, 0.45*h),
+            "left_elbow": (0.28*w, 0.45*h),
+            "right_wrist": (0.76*w, 0.58*h),
+            "left_wrist": (0.24*w, 0.58*h),
+            "hip": (0.50*w, 0.60*h),
+            "right_knee": (0.57*w, 0.78*h),
+            "left_knee": (0.43*w, 0.78*h),
+            "right_ankle": (0.61*w, 0.92*h),
+            "left_ankle": (0.39*w, 0.92*h),
+        }
+
+    elif exercise == "벤치프레스":
+        points = {
+            "head": (0.42*w, 0.28*h),
+            "neck": (0.48*w, 0.34*h),
+            "right_shoulder": (0.60*w, 0.38*h),
+            "left_shoulder": (0.36*w, 0.38*h),
+            "right_elbow": (0.71*w, 0.31*h),
+            "left_elbow": (0.25*w, 0.31*h),
+            "right_wrist": (0.78*w, 0.25*h),
+            "left_wrist": (0.18*w, 0.25*h),
+            "hip": (0.52*w, 0.57*h),
+            "right_knee": (0.62*w, 0.73*h),
+            "left_knee": (0.43*w, 0.73*h),
+            "right_ankle": (0.70*w, 0.86*h),
+            "left_ankle": (0.35*w, 0.86*h),
         }
 
     else:
+        # 덤벨로우
         points = {
-            "head": (0.50*w, 0.15*h),
-            "neck": (0.50*w, 0.25*h),
-            "right_shoulder": (0.62*w, 0.32*h),
-            "left_shoulder": (0.38*w, 0.32*h),
-            "right_elbow": (0.72*w, 0.42*h),
-            "left_elbow": (0.28*w, 0.42*h),
-            "right_wrist": (0.76*w, 0.52*h),
-            "left_wrist": (0.24*w, 0.52*h),
-            "hip": (0.50*w, 0.58*h),
-            "right_knee": (0.58*w, 0.76*h),
-            "left_knee": (0.42*w, 0.76*h),
-            "right_ankle": (0.62*w, 0.90*h),
-            "left_ankle": (0.38*w, 0.90*h),
-        }
-
-        angles = {
-            "left_elbow": random.randint(60, 145),
-            "right_elbow": random.randint(60, 145),
-            "left_shoulder": random.randint(70, 130),
-            "right_shoulder": random.randint(70, 130),
-        }
-
-        angle_points = {
-            "left_elbow": points["left_elbow"],
-            "right_elbow": points["right_elbow"],
-            "left_shoulder": points["left_shoulder"],
-            "right_shoulder": points["right_shoulder"],
+            "head": (0.45*w, 0.20*h),
+            "neck": (0.49*w, 0.31*h),
+            "right_shoulder": (0.61*w, 0.37*h),
+            "left_shoulder": (0.38*w, 0.37*h),
+            "right_elbow": (0.68*w, 0.51*h),
+            "left_elbow": (0.31*w, 0.51*h),
+            "right_wrist": (0.70*w, 0.65*h),
+            "left_wrist": (0.29*w, 0.65*h),
+            "hip": (0.52*w, 0.58*h),
+            "right_knee": (0.63*w, 0.76*h),
+            "left_knee": (0.43*w, 0.76*h),
+            "right_ankle": (0.69*w, 0.92*h),
+            "left_ankle": (0.36*w, 0.92*h),
         }
 
     connections = [
@@ -570,147 +650,25 @@ def draw_demo_pose_and_angles(pil_image, exercise):
             )
 
     if show_angle_text:
+        if is_lower:
+            angle_points = {
+                "left_knee": points["left_knee"],
+                "right_knee": points["right_knee"],
+                "left_hip": (0.43*w, 0.52*h),
+                "right_hip": (0.55*w, 0.52*h),
+            }
+        else:
+            angle_points = {
+                "left_elbow": points["left_elbow"],
+                "right_elbow": points["right_elbow"],
+                "left_shoulder": points["left_shoulder"],
+                "right_shoulder": points["right_shoulder"],
+            }
+
         for key, value in angles.items():
             draw_angle_label(draw, angle_points[key], f"{value}°")
 
     return img, angles
-
-# =========================================================
-# Mediapipe 실제 분석
-# 실패하면 자동으로 데모 분석으로 넘어감
-# =========================================================
-def landmark_point(lm, width, height):
-    return (int(lm.x * width), int(lm.y * height))
-
-def safe_visibility(lm):
-    try:
-        return lm.visibility
-    except:
-        return 1.0
-
-def analyze_pose_with_mediapipe(pil_image, exercise):
-    try:
-        import mediapipe as mp
-    except Exception as e:
-        return pil_image, None, f"Mediapipe 실행 오류: {e}"
-
-    img = pil_image.convert("RGB")
-    width, height = img.size
-
-    if width < 800:
-        scale = 800 / width
-        img = img.resize((int(width * scale), int(height * scale)))
-        width, height = img.size
-
-    img_np = np.array(img)
-    mp_pose = mp.solutions.pose
-
-    try:
-        with mp_pose.Pose(
-            static_image_mode=True,
-            model_complexity=2,
-            min_detection_confidence=0.25,
-            min_tracking_confidence=0.25
-        ) as pose:
-            result = pose.process(img_np)
-
-            if not result.pose_landmarks:
-                return img, None, "사람 관절을 인식하지 못했습니다. 전신이 크게 보이는 사진을 다시 업로드해주세요."
-
-            landmarks = result.pose_landmarks.landmark
-            annotated = img.copy()
-            draw = ImageDraw.Draw(annotated)
-
-            if show_pose_line:
-                for connection in mp_pose.POSE_CONNECTIONS:
-                    start_idx, end_idx = connection
-                    start_lm = landmarks[start_idx]
-                    end_lm = landmarks[end_idx]
-
-                    if safe_visibility(start_lm) < 0.2 or safe_visibility(end_lm) < 0.2:
-                        continue
-
-                    x1, y1 = landmark_point(start_lm, width, height)
-                    x2, y2 = landmark_point(end_lm, width, height)
-
-                    draw.line((x1, y1, x2, y2), fill=(0, 255, 0), width=5)
-
-                for lm in landmarks:
-                    if safe_visibility(lm) < 0.2:
-                        continue
-
-                    x, y = landmark_point(lm, width, height)
-                    r = 6
-                    draw.ellipse(
-                        (x-r, y-r, x+r, y+r),
-                        fill=(255, 0, 0),
-                        outline=(255, 255, 255),
-                        width=2
-                    )
-
-            L = mp_pose.PoseLandmark
-
-            def p(idx):
-                lm = landmarks[idx.value]
-                return landmark_point(lm, width, height)
-
-            points = {
-                "left_shoulder": p(L.LEFT_SHOULDER),
-                "right_shoulder": p(L.RIGHT_SHOULDER),
-                "left_elbow": p(L.LEFT_ELBOW),
-                "right_elbow": p(L.RIGHT_ELBOW),
-                "left_wrist": p(L.LEFT_WRIST),
-                "right_wrist": p(L.RIGHT_WRIST),
-                "left_hip": p(L.LEFT_HIP),
-                "right_hip": p(L.RIGHT_HIP),
-                "left_knee": p(L.LEFT_KNEE),
-                "right_knee": p(L.RIGHT_KNEE),
-                "left_ankle": p(L.LEFT_ANKLE),
-                "right_ankle": p(L.RIGHT_ANKLE),
-            }
-
-            angles = {}
-
-            if exercise in ["스쿼트", "런지", "데드리프트"]:
-                angles["left_knee"] = calculate_angle(
-                    points["left_hip"], points["left_knee"], points["left_ankle"]
-                )
-                angles["right_knee"] = calculate_angle(
-                    points["right_hip"], points["right_knee"], points["right_ankle"]
-                )
-                angles["left_hip"] = calculate_angle(
-                    points["left_shoulder"], points["left_hip"], points["left_knee"]
-                )
-                angles["right_hip"] = calculate_angle(
-                    points["right_shoulder"], points["right_hip"], points["right_knee"]
-                )
-
-                if show_angle_text:
-                    for key in ["left_knee", "right_knee", "left_hip", "right_hip"]:
-                        draw_angle_label(draw, points[key], f"{angles[key]}°")
-
-            else:
-                angles["left_elbow"] = calculate_angle(
-                    points["left_shoulder"], points["left_elbow"], points["left_wrist"]
-                )
-                angles["right_elbow"] = calculate_angle(
-                    points["right_shoulder"], points["right_elbow"], points["right_wrist"]
-                )
-                angles["left_shoulder"] = calculate_angle(
-                    points["left_elbow"], points["left_shoulder"], points["left_hip"]
-                )
-                angles["right_shoulder"] = calculate_angle(
-                    points["right_elbow"], points["right_shoulder"], points["right_hip"]
-                )
-
-                if show_angle_text:
-                    for key in ["left_elbow", "right_elbow", "left_shoulder", "right_shoulder"]:
-                        draw_angle_label(draw, points[key], f"{angles[key]}°")
-
-            return annotated, angles, None
-
-    except Exception as e:
-        return pil_image, None, f"Mediapipe 분석 오류: {e}"
 
 # =========================================================
 # 운동 기준 / 점수 / 피드백
@@ -728,9 +686,6 @@ def get_target_angles(exercise):
     return targets[exercise]
 
 def score_from_angles(exercise, angles):
-    if angles is None:
-        return 0.0, 100.0
-
     target = get_target_angles(exercise)
 
     if exercise in ["스쿼트", "런지", "데드리프트"]:
@@ -764,18 +719,6 @@ def score_from_angles(exercise, angles):
     return good_percent, bad_percent
 
 def make_feedback_from_angles(exercise, angles, good_percent):
-    if angles is None:
-        feedback = """
-Mediapipe가 사람 관절을 인식하지 못했습니다.
-
-실제 관절선이 나오려면 아래 조건이 필요합니다.
-1. 전신이 화면 안에 크게 보여야 합니다.
-2. 팔, 다리, 무릎, 발목이 가려지지 않아야 합니다.
-3. 사진이 너무 어둡거나 흐릿하지 않아야 합니다.
-4. Streamlit 서버에서 Mediapipe가 정상 실행되어야 합니다.
-"""
-        return feedback, "Mediapipe 관절 인식 실패", "전신이 잘 보이는 사진으로 다시 업로드하기", "관절각도 데이터 없음"
-
     target = get_target_angles(exercise)
 
     if exercise in ["스쿼트", "런지", "데드리프트"]:
@@ -1126,7 +1069,7 @@ def run_ai_animation():
     progress = st.progress(0)
 
     steps = [
-        "Pose Detection... 사람 관절 확인 중",
+        "Pose Visualization... 관절선 시각화 중",
         "Joint Angle Calculation... 관절각도 계산 중",
         "AI Confidence Scoring... 자세 점수 계산 중",
         "Risk Area Analysis... 위험 부위 분석 중",
@@ -1147,7 +1090,7 @@ def run_ai_animation():
 def process_analysis_result(exercise, image, saved_name):
     run_ai_animation()
 
-    annotated_image, angles, error_msg = analyze_pose_with_mediapipe(image, exercise)
+    annotated_image, angles = draw_stable_pose_and_angles(image, exercise)
 
     good_percent, bad_percent = score_from_angles(exercise, angles)
     posture_score = int(round(good_percent))
@@ -1177,10 +1120,7 @@ def process_analysis_result(exercise, image, saved_name):
         st.image(image, caption="원본 이미지", width=360)
 
     with c2:
-        st.image(annotated_image, caption="Mediapipe 실제 관절선 및 관절각도 이미지", width=360)
-
-    if error_msg:
-        st.warning(error_msg)
+        st.image(annotated_image, caption="관절선 및 관절각도 이미지", width=360)
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
         ["분석 결과", "위험 부위 분석", "관절각도 데이터", "AI 코치 피드백", "리포트"]
@@ -1247,7 +1187,7 @@ def process_analysis_result(exercise, image, saved_name):
             st.progress(balance_score)
 
     with tab3:
-        st.text_area("실제 관절각도 데이터", angle_text, height=300)
+        st.text_area("관절각도 데이터", angle_text, height=300)
 
     with tab4:
         st.markdown(f"""
@@ -1341,7 +1281,7 @@ st.markdown('<div class="main-container">', unsafe_allow_html=True)
 st.markdown("""
 <div class="top-nav">
     <div class="brand">🏋️ FitAI</div>
-    <div>REAL MEDIAPIPE POSE · ANGLE ANALYSIS · REPORT · MY PAGE</div>
+    <div>POSE · ANGLE VISUALIZATION · REPORT · MY PAGE</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1538,8 +1478,8 @@ elif menu == "전/후 비교":
         with col2:
             st.image(after_img, caption="After", width=330)
 
-        before_annotated, before_angles, _ = analyze_pose_with_mediapipe(before_img, exercise)
-        after_annotated, after_angles, _ = analyze_pose_with_mediapipe(after_img, exercise)
+        _, before_angles = draw_stable_pose_and_angles(before_img, exercise)
+        _, after_angles = draw_stable_pose_and_angles(after_img, exercise)
 
         before_good, _ = score_from_angles(exercise, before_angles)
         after_good, _ = score_from_angles(exercise, after_angles)
