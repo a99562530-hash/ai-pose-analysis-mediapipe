@@ -9,11 +9,11 @@ import os
 import shutil
 
 # =========================================================
-# FitAI 전체 기능 안정형 코드
+# FitAI 전체 기능 실제 Mediapipe 전용 코드
 # 핵심:
-# - Mediapipe가 되면 실제 관절선/실제 각도 사용
-# - Mediapipe가 libGL 오류 등으로 실패하면 자동으로 데모 관절선/데모 각도 표시
-# - 그래서 관절각도 데이터가 "없음"으로 끝나지 않게 구성
+# - 데모 관절선 사용 안 함
+# - Mediapipe가 실제 사람 몸을 인식해야 관절선과 각도 표시
+# - Mediapipe 실패 시 오류 안내만 표시
 # =========================================================
 
 st.set_page_config(
@@ -592,8 +592,7 @@ def analyze_pose_with_mediapipe(pil_image, exercise):
     try:
         import mediapipe as mp
     except Exception as e:
-        demo_img, demo_angles = draw_demo_pose_and_angles(pil_image, exercise)
-        return demo_img, demo_angles, f"Mediapipe 실행 오류: {e}\n현재는 데모 관절각도 모드로 표시합니다."
+        return pil_image, None, f"Mediapipe 실행 오류: {e}"
 
     img = pil_image.convert("RGB")
     width, height = img.size
@@ -616,8 +615,7 @@ def analyze_pose_with_mediapipe(pil_image, exercise):
             result = pose.process(img_np)
 
             if not result.pose_landmarks:
-                demo_img, demo_angles = draw_demo_pose_and_angles(pil_image, exercise)
-                return demo_img, demo_angles, "사람 관절 인식이 어려워 데모 관절각도 모드로 표시합니다."
+                return img, None, "사람 관절을 인식하지 못했습니다. 전신이 크게 보이는 사진을 다시 업로드해주세요."
 
             landmarks = result.pose_landmarks.landmark
             annotated = img.copy()
@@ -712,8 +710,7 @@ def analyze_pose_with_mediapipe(pil_image, exercise):
             return annotated, angles, None
 
     except Exception as e:
-        demo_img, demo_angles = draw_demo_pose_and_angles(pil_image, exercise)
-        return demo_img, demo_angles, f"Mediapipe 분석 오류: {e}\n현재는 데모 관절각도 모드로 표시합니다."
+        return pil_image, None, f"Mediapipe 분석 오류: {e}"
 
 # =========================================================
 # 운동 기준 / 점수 / 피드백
@@ -731,6 +728,9 @@ def get_target_angles(exercise):
     return targets[exercise]
 
 def score_from_angles(exercise, angles):
+    if angles is None:
+        return 0.0, 100.0
+
     target = get_target_angles(exercise)
 
     if exercise in ["스쿼트", "런지", "데드리프트"]:
@@ -764,6 +764,18 @@ def score_from_angles(exercise, angles):
     return good_percent, bad_percent
 
 def make_feedback_from_angles(exercise, angles, good_percent):
+    if angles is None:
+        feedback = """
+Mediapipe가 사람 관절을 인식하지 못했습니다.
+
+실제 관절선이 나오려면 아래 조건이 필요합니다.
+1. 전신이 화면 안에 크게 보여야 합니다.
+2. 팔, 다리, 무릎, 발목이 가려지지 않아야 합니다.
+3. 사진이 너무 어둡거나 흐릿하지 않아야 합니다.
+4. Streamlit 서버에서 Mediapipe가 정상 실행되어야 합니다.
+"""
+        return feedback, "Mediapipe 관절 인식 실패", "전신이 잘 보이는 사진으로 다시 업로드하기", "관절각도 데이터 없음"
+
     target = get_target_angles(exercise)
 
     if exercise in ["스쿼트", "런지", "데드리프트"]:
@@ -1165,7 +1177,7 @@ def process_analysis_result(exercise, image, saved_name):
         st.image(image, caption="원본 이미지", width=360)
 
     with c2:
-        st.image(annotated_image, caption="관절선 및 관절각도 이미지", width=360)
+        st.image(annotated_image, caption="Mediapipe 실제 관절선 및 관절각도 이미지", width=360)
 
     if error_msg:
         st.warning(error_msg)
@@ -1329,7 +1341,7 @@ st.markdown('<div class="main-container">', unsafe_allow_html=True)
 st.markdown("""
 <div class="top-nav">
     <div class="brand">🏋️ FitAI</div>
-    <div>POSE · ANGLE ANALYSIS · REPORT · MY PAGE</div>
+    <div>REAL MEDIAPIPE POSE · ANGLE ANALYSIS · REPORT · MY PAGE</div>
 </div>
 """, unsafe_allow_html=True)
 
