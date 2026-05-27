@@ -1,5 +1,6 @@
 streamlit
-numpy
+numpy==1.26.4
 pandas
 pillow
-
+mediapipe==0.10.14
+protobuf<5
