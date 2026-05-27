@@ -462,50 +462,161 @@ def get_demo_angles(exercise, pil_image):
 
     if exercise == "스쿼트":
         return {
-            "left_knee": random.randint(80, 115),
-            "right_knee": random.randint(80, 115),
-            "left_hip": random.randint(75, 110),
-            "right_hip": random.randint(75, 110)
+            "left_knee": random.randint(82, 110),
+            "right_knee": random.randint(82, 110),
+            "left_hip": random.randint(75, 105),
+            "right_hip": random.randint(75, 105)
         }
 
     if exercise == "런지":
         return {
-            "left_knee": random.randint(80, 115),
-            "right_knee": random.randint(80, 120),
-            "left_hip": random.randint(80, 115),
-            "right_hip": random.randint(80, 115)
+            "left_knee": random.randint(82, 108),
+            "right_knee": random.randint(85, 118),
+            "left_hip": random.randint(82, 112),
+            "right_hip": random.randint(82, 112)
         }
 
     if exercise == "데드리프트":
         return {
-            "left_knee": random.randint(110, 150),
-            "right_knee": random.randint(110, 150),
+            "left_knee": random.randint(115, 150),
+            "right_knee": random.randint(115, 150),
             "left_hip": random.randint(90, 130),
             "right_hip": random.randint(90, 130)
         }
 
     if exercise == "렛풀다운":
         return {
-            "left_elbow": random.randint(65, 110),
-            "right_elbow": random.randint(65, 110),
-            "left_shoulder": random.randint(80, 125),
-            "right_shoulder": random.randint(80, 125)
+            "left_elbow": random.randint(70, 105),
+            "right_elbow": random.randint(70, 105),
+            "left_shoulder": random.randint(85, 120),
+            "right_shoulder": random.randint(85, 120)
         }
 
     if exercise == "벤치프레스":
         return {
-            "left_elbow": random.randint(75, 120),
-            "right_elbow": random.randint(75, 120),
-            "left_shoulder": random.randint(70, 115),
-            "right_shoulder": random.randint(70, 115)
+            "left_elbow": random.randint(80, 115),
+            "right_elbow": random.randint(80, 115),
+            "left_shoulder": random.randint(75, 110),
+            "right_shoulder": random.randint(75, 110)
         }
 
     # 덤벨로우
     return {
-        "left_elbow": random.randint(70, 120),
-        "right_elbow": random.randint(70, 120),
-        "left_shoulder": random.randint(75, 120),
-        "right_shoulder": random.randint(75, 120)
+        "left_elbow": random.randint(75, 115),
+        "right_elbow": random.randint(75, 115),
+        "left_shoulder": random.randint(80, 115),
+        "right_shoulder": random.randint(80, 115)
+    }
+
+def P(w, h, x, y):
+    return (int(w * x), int(h * y))
+
+def get_pose_points(exercise, w, h):
+    """
+    실제 인식은 아니지만 운동별 대표 자세에 맞춰 좌표를 다르게 배치함.
+    벤치프레스는 누운 자세형으로 따로 구성해서 기존보다 몸 위치에 더 가깝게 보이게 함.
+    """
+
+    if exercise == "벤치프레스":
+        return {
+            "head": P(w, h, 0.28, 0.45),
+            "neck": P(w, h, 0.38, 0.43),
+            "left_shoulder": P(w, h, 0.44, 0.39),
+            "right_shoulder": P(w, h, 0.55, 0.39),
+            "left_elbow": P(w, h, 0.37, 0.28),
+            "right_elbow": P(w, h, 0.62, 0.28),
+            "left_wrist": P(w, h, 0.32, 0.19),
+            "right_wrist": P(w, h, 0.67, 0.19),
+            "hip": P(w, h, 0.58, 0.58),
+            "left_knee": P(w, h, 0.44, 0.76),
+            "right_knee": P(w, h, 0.74, 0.75),
+            "left_ankle": P(w, h, 0.30, 0.84),
+            "right_ankle": P(w, h, 0.86, 0.84),
+        }
+
+    if exercise == "렛풀다운":
+        return {
+            "head": P(w, h, 0.50, 0.17),
+            "neck": P(w, h, 0.50, 0.29),
+            "left_shoulder": P(w, h, 0.38, 0.34),
+            "right_shoulder": P(w, h, 0.62, 0.34),
+            "left_elbow": P(w, h, 0.30, 0.48),
+            "right_elbow": P(w, h, 0.70, 0.48),
+            "left_wrist": P(w, h, 0.24, 0.61),
+            "right_wrist": P(w, h, 0.76, 0.61),
+            "hip": P(w, h, 0.50, 0.63),
+            "left_knee": P(w, h, 0.39, 0.80),
+            "right_knee": P(w, h, 0.61, 0.80),
+            "left_ankle": P(w, h, 0.34, 0.93),
+            "right_ankle": P(w, h, 0.66, 0.93),
+        }
+
+    if exercise == "스쿼트":
+        return {
+            "head": P(w, h, 0.50, 0.16),
+            "neck": P(w, h, 0.50, 0.28),
+            "left_shoulder": P(w, h, 0.40, 0.35),
+            "right_shoulder": P(w, h, 0.60, 0.35),
+            "left_elbow": P(w, h, 0.34, 0.48),
+            "right_elbow": P(w, h, 0.66, 0.48),
+            "left_wrist": P(w, h, 0.30, 0.58),
+            "right_wrist": P(w, h, 0.70, 0.58),
+            "hip": P(w, h, 0.50, 0.58),
+            "left_knee": P(w, h, 0.38, 0.72),
+            "right_knee": P(w, h, 0.62, 0.72),
+            "left_ankle": P(w, h, 0.31, 0.90),
+            "right_ankle": P(w, h, 0.69, 0.90),
+        }
+
+    if exercise == "런지":
+        return {
+            "head": P(w, h, 0.48, 0.13),
+            "neck": P(w, h, 0.50, 0.25),
+            "left_shoulder": P(w, h, 0.42, 0.32),
+            "right_shoulder": P(w, h, 0.58, 0.32),
+            "left_elbow": P(w, h, 0.36, 0.45),
+            "right_elbow": P(w, h, 0.64, 0.45),
+            "left_wrist": P(w, h, 0.32, 0.56),
+            "right_wrist": P(w, h, 0.68, 0.56),
+            "hip": P(w, h, 0.50, 0.52),
+            "left_knee": P(w, h, 0.35, 0.69),
+            "right_knee": P(w, h, 0.66, 0.72),
+            "left_ankle": P(w, h, 0.23, 0.86),
+            "right_ankle": P(w, h, 0.78, 0.88),
+        }
+
+    if exercise == "데드리프트":
+        return {
+            "head": P(w, h, 0.42, 0.22),
+            "neck": P(w, h, 0.47, 0.31),
+            "left_shoulder": P(w, h, 0.37, 0.37),
+            "right_shoulder": P(w, h, 0.58, 0.37),
+            "left_elbow": P(w, h, 0.35, 0.53),
+            "right_elbow": P(w, h, 0.61, 0.53),
+            "left_wrist": P(w, h, 0.34, 0.68),
+            "right_wrist": P(w, h, 0.62, 0.68),
+            "hip": P(w, h, 0.53, 0.58),
+            "left_knee": P(w, h, 0.42, 0.76),
+            "right_knee": P(w, h, 0.62, 0.76),
+            "left_ankle": P(w, h, 0.36, 0.92),
+            "right_ankle": P(w, h, 0.68, 0.92),
+        }
+
+    # 덤벨로우
+    return {
+        "head": P(w, h, 0.42, 0.22),
+        "neck": P(w, h, 0.48, 0.33),
+        "left_shoulder": P(w, h, 0.38, 0.39),
+        "right_shoulder": P(w, h, 0.60, 0.39),
+        "left_elbow": P(w, h, 0.34, 0.53),
+        "right_elbow": P(w, h, 0.68, 0.54),
+        "left_wrist": P(w, h, 0.32, 0.67),
+        "right_wrist": P(w, h, 0.70, 0.67),
+        "hip": P(w, h, 0.53, 0.60),
+        "left_knee": P(w, h, 0.43, 0.78),
+        "right_knee": P(w, h, 0.64, 0.78),
+        "left_ankle": P(w, h, 0.36, 0.93),
+        "right_ankle": P(w, h, 0.70, 0.93),
     }
 
 def draw_stable_pose_and_angles(pil_image, exercise):
@@ -513,126 +624,22 @@ def draw_stable_pose_and_angles(pil_image, exercise):
     draw = ImageDraw.Draw(img)
     w, h = img.size
 
-    is_lower = exercise in ["스쿼트", "런지", "데드리프트"]
+    points = get_pose_points(exercise, w, h)
     angles = get_demo_angles(exercise, img)
-
-    # 운동별 포즈 위치를 다르게 구성
-    if exercise == "런지":
-        points = {
-            "head": (0.50*w, 0.13*h),
-            "neck": (0.50*w, 0.24*h),
-            "right_shoulder": (0.58*w, 0.31*h),
-            "left_shoulder": (0.42*w, 0.31*h),
-            "right_elbow": (0.65*w, 0.43*h),
-            "left_elbow": (0.35*w, 0.43*h),
-            "right_wrist": (0.69*w, 0.53*h),
-            "left_wrist": (0.31*w, 0.53*h),
-            "hip": (0.50*w, 0.50*h),
-            "right_knee": (0.63*w, 0.70*h),
-            "left_knee": (0.37*w, 0.68*h),
-            "right_ankle": (0.72*w, 0.87*h),
-            "left_ankle": (0.25*w, 0.86*h),
-        }
-
-    elif exercise == "스쿼트":
-        points = {
-            "head": (0.50*w, 0.15*h),
-            "neck": (0.50*w, 0.25*h),
-            "right_shoulder": (0.60*w, 0.32*h),
-            "left_shoulder": (0.40*w, 0.32*h),
-            "right_elbow": (0.69*w, 0.44*h),
-            "left_elbow": (0.31*w, 0.44*h),
-            "right_wrist": (0.75*w, 0.54*h),
-            "left_wrist": (0.25*w, 0.54*h),
-            "hip": (0.50*w, 0.53*h),
-            "right_knee": (0.62*w, 0.70*h),
-            "left_knee": (0.38*w, 0.70*h),
-            "right_ankle": (0.69*w, 0.88*h),
-            "left_ankle": (0.31*w, 0.88*h),
-        }
-
-    elif exercise == "데드리프트":
-        points = {
-            "head": (0.46*w, 0.18*h),
-            "neck": (0.49*w, 0.29*h),
-            "right_shoulder": (0.60*w, 0.36*h),
-            "left_shoulder": (0.38*w, 0.36*h),
-            "right_elbow": (0.63*w, 0.52*h),
-            "left_elbow": (0.35*w, 0.52*h),
-            "right_wrist": (0.64*w, 0.66*h),
-            "left_wrist": (0.34*w, 0.66*h),
-            "hip": (0.50*w, 0.56*h),
-            "right_knee": (0.60*w, 0.75*h),
-            "left_knee": (0.40*w, 0.75*h),
-            "right_ankle": (0.65*w, 0.92*h),
-            "left_ankle": (0.35*w, 0.92*h),
-        }
-
-    elif exercise == "렛풀다운":
-        points = {
-            "head": (0.50*w, 0.16*h),
-            "neck": (0.50*w, 0.26*h),
-            "right_shoulder": (0.63*w, 0.32*h),
-            "left_shoulder": (0.37*w, 0.32*h),
-            "right_elbow": (0.72*w, 0.45*h),
-            "left_elbow": (0.28*w, 0.45*h),
-            "right_wrist": (0.76*w, 0.58*h),
-            "left_wrist": (0.24*w, 0.58*h),
-            "hip": (0.50*w, 0.60*h),
-            "right_knee": (0.57*w, 0.78*h),
-            "left_knee": (0.43*w, 0.78*h),
-            "right_ankle": (0.61*w, 0.92*h),
-            "left_ankle": (0.39*w, 0.92*h),
-        }
-
-    elif exercise == "벤치프레스":
-        points = {
-            "head": (0.42*w, 0.28*h),
-            "neck": (0.48*w, 0.34*h),
-            "right_shoulder": (0.60*w, 0.38*h),
-            "left_shoulder": (0.36*w, 0.38*h),
-            "right_elbow": (0.71*w, 0.31*h),
-            "left_elbow": (0.25*w, 0.31*h),
-            "right_wrist": (0.78*w, 0.25*h),
-            "left_wrist": (0.18*w, 0.25*h),
-            "hip": (0.52*w, 0.57*h),
-            "right_knee": (0.62*w, 0.73*h),
-            "left_knee": (0.43*w, 0.73*h),
-            "right_ankle": (0.70*w, 0.86*h),
-            "left_ankle": (0.35*w, 0.86*h),
-        }
-
-    else:
-        # 덤벨로우
-        points = {
-            "head": (0.45*w, 0.20*h),
-            "neck": (0.49*w, 0.31*h),
-            "right_shoulder": (0.61*w, 0.37*h),
-            "left_shoulder": (0.38*w, 0.37*h),
-            "right_elbow": (0.68*w, 0.51*h),
-            "left_elbow": (0.31*w, 0.51*h),
-            "right_wrist": (0.70*w, 0.65*h),
-            "left_wrist": (0.29*w, 0.65*h),
-            "hip": (0.52*w, 0.58*h),
-            "right_knee": (0.63*w, 0.76*h),
-            "left_knee": (0.43*w, 0.76*h),
-            "right_ankle": (0.69*w, 0.92*h),
-            "left_ankle": (0.36*w, 0.92*h),
-        }
 
     connections = [
         ("head", "neck"),
-        ("neck", "right_shoulder"),
         ("neck", "left_shoulder"),
-        ("right_shoulder", "right_elbow"),
-        ("right_elbow", "right_wrist"),
+        ("neck", "right_shoulder"),
         ("left_shoulder", "left_elbow"),
         ("left_elbow", "left_wrist"),
+        ("right_shoulder", "right_elbow"),
+        ("right_elbow", "right_wrist"),
         ("neck", "hip"),
-        ("hip", "right_knee"),
-        ("right_knee", "right_ankle"),
         ("hip", "left_knee"),
         ("left_knee", "left_ankle"),
+        ("hip", "right_knee"),
+        ("right_knee", "right_ankle"),
     ]
 
     if show_pose_line:
@@ -651,12 +658,12 @@ def draw_stable_pose_and_angles(pil_image, exercise):
             )
 
     if show_angle_text:
-        if is_lower:
+        if exercise in ["스쿼트", "런지", "데드리프트"]:
             angle_points = {
                 "left_knee": points["left_knee"],
                 "right_knee": points["right_knee"],
-                "left_hip": (0.43*w, 0.52*h),
-                "right_hip": (0.55*w, 0.52*h),
+                "left_hip": P(w, h, 0.44, 0.55),
+                "right_hip": P(w, h, 0.56, 0.55),
             }
         else:
             angle_points = {
@@ -670,6 +677,7 @@ def draw_stable_pose_and_angles(pil_image, exercise):
             draw_angle_label(draw, angle_points[key], f"{value}°")
 
     return img, angles
+
 
 # =========================================================
 # 운동 기준 / 점수 / 피드백
@@ -1121,7 +1129,7 @@ def process_analysis_result(exercise, image, saved_name):
         st.image(image, caption="원본 이미지", width=360)
 
     with c2:
-        st.image(annotated_image, caption="관절선 및 관절각도 이미지", width=360)
+        st.image(annotated_image, caption="운동별 관절선 및 관절각도 이미지", width=360)
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
         ["분석 결과", "위험 부위 분석", "관절각도 데이터", "AI 코치 피드백", "리포트"]
@@ -1282,7 +1290,7 @@ st.markdown('<div class="main-container">', unsafe_allow_html=True)
 st.markdown("""
 <div class="top-nav">
     <div class="brand">🏋️ FitAI</div>
-    <div>POSE · ANGLE VISUALIZATION · REPORT · MY PAGE</div>
+    <div>POSE · EXERCISE-SPECIFIC ANGLE VISUALIZATION · REPORT · MY PAGE</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1527,7 +1535,7 @@ else:
     <div class="hero">
         <div class="hero-title">안녕하세요, {user_id}님 👋</div>
         <div class="hero-sub">
-        운동 사진을 업로드하면 관절선과 관절각도 기준에 따라 자세를 분석합니다.
+        운동 사진을 업로드하면 운동별 관절선과 관절각도 기준에 따라 자세를 분석합니다.
         </div>
     </div>
     """, unsafe_allow_html=True)
