@@ -1,3 +1,7 @@
+import os
+os.environ["GLOG_minloglevel"] = "2"
+os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"
+
 
 import streamlit as st
 import pandas as pd
@@ -6,7 +10,6 @@ from PIL import Image, ImageDraw
 from datetime import datetime
 import hashlib
 import random
-import os
 import shutil
 
 # =========================================================
