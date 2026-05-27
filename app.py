@@ -17,6 +17,7 @@ import shutil
 # 핵심:
 # - 데모 관절선 사용 안 함
 # - Mediapipe가 실제 사람 몸을 인식해야 관절선과 각도 표시
+# - Streamlit Cloud 권한 오류 방지를 위해 model_complexity=1 사용
 # - Mediapipe 실패 시 오류 안내만 표시
 # =========================================================
 
@@ -612,7 +613,7 @@ def analyze_pose_with_mediapipe(pil_image, exercise):
     try:
         with mp_pose.Pose(
             static_image_mode=True,
-            model_complexity=2,
+            model_complexity=1,
             min_detection_confidence=0.25,
             min_tracking_confidence=0.25
         ) as pose:
